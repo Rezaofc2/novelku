@@ -22,7 +22,7 @@ async function fetchHtml(url: string) {
 function scrapeList(html: string): any[] {
   const $ = cheerio.load(html);
   const items: any[] = [];
-  $(".page-item-detail, .manga, article").each((_, el) => {
+  $(".page-item-detail, .manga, article, .row.c-tabs-item__content").each((_, el) => {
     const a = $(el).find("h3 a,.post-title a,h2 a").first();
     if (!a.length) return;
     const title = a.text().trim();
@@ -30,7 +30,7 @@ function scrapeList(html: string): any[] {
     if (!href.includes("/novel/")) return;
     let slug = href.replace(BASE + "/novel/", "").replace(/\/$/, "");
     if (slug.includes("/") || !slug) return;
-    const img = $(el).find("img").first();
+    const img = $(el).find(".tab-thumb img, img").first();
     const cover = img.attr("src") || img.attr("data-src") || "";
     const rating = $(el).find(".rating .score,.post-total-vote").text().trim() || "";
     items.push({ title, slug, cover, rating });
