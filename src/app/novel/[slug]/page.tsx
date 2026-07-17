@@ -171,7 +171,7 @@ export default async function NovelDetailPage({
                 Sinopsis
               </h2>
               <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                {novel.summary}
+                {novel.summary.length > 10 ? novel.summary : "Tidak ada sinopsis tersedia."}
               </div>
             </div>
           )}
