@@ -8,9 +8,9 @@ export const revalidate = 86400;
 export default async function ChapterPage({
   params,
 }: {
-  params: Promise<{ slug: string; chapterSlug: string[] }>;
+  params: { slug: string; chapterSlug: string[] };
 }) {
-  const { slug, chapterSlug } = await params;
+  const { slug, chapterSlug } = await Promise.resolve(params);
   const fullSlug = `${slug}/${chapterSlug.join("/")}`;
 
   let chapter: any = null;
@@ -22,137 +22,110 @@ export default async function ChapterPage({
     error = e.message || "Gagal memuat chapter";
   }
 
-  if (!chapter && !error) notFound();
+  if (!chapter && !error) {
+    return notFound();
+  }
+
+  // Extract chapter number for prev/next
+  const chMatch = fullSlug.match(/chapter-(\d+)/i);
+  const chNum = chMatch ? parseInt(chMatch[1], 10) : 0;
+  const label = chapterSlug[0] || "mtl"; // htl or mtl
+
+  const prevLink = chNum > 1 ? `/novel/${slug}/${label}/chapter-${chNum - 1}` : null;
+  const nextLink = `/novel/${slug}/${label}/chapter-${chNum + 1}`; // always show next
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-6 flex-wrap">
-        <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-          Beranda
+      <nav className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        <Link href="/" className="hover:text-indigo-600">Beranda</Link>
+        {" / "}
+        <Link href={`/novel/${slug}`} className="hover:text-indigo-600">
+          {chapter?.novelTitle || slug.replace(/-/g, " ")}
         </Link>
-        <span>/</span>
+      </nav>
+
+      {/* Chapter title */}
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 text-center">
+        {chapter?.title || `Chapter ${chNum}`}
+      </h1>
+      {chapter?.label && (
+        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mb-4">
+          {chapter.label.toUpperCase()} - Chapter {chNum}
+        </p>
+      )}
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        {prevLink ? (
+          <Link
+            href={prevLink}
+            className="px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 transition"
+          >
+            ← Prev
+          </Link>
+        ) : (
+          <span className="px-4 py-2 text-sm text-gray-300 dark:text-gray-600">← Prev</span>
+        )}
         <Link
           href={`/novel/${slug}`}
-          className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          className="px-4 py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
         >
-          {chapter?.novelTitle || slug}
+          Semua Chapter
         </Link>
-        <span>/</span>
-        <span className="text-gray-600 dark:text-gray-300 truncate">{chapter?.title || chapterSlug}</span>
+        <Link
+          href={nextLink}
+          className="px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 transition"
+        >
+          Next →
+        </Link>
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-600 dark:text-red-400 text-sm mb-6">
-          ⚠️ Gagal memuat chapter. Silakan coba lagi.
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+          {error}
         </div>
       )}
 
-      {chapter ? (
-        <>
-          {/* Chapter Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {chapter.title}
-            </h1>
-            {chapter.novelTitle && (
-              <Link
-                href={`/novel/${slug}`}
-                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-              >
-                {chapter.novelTitle}
-              </Link>
-            )}
-            {chapter.label && (
-              <span className={`ml-2 text-xs font-bold px-2 py-0.5 rounded ${
-                chapter.label.toLowerCase() === "htl"
-                  ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                  : "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
-              }`}>
-                {chapter.label}
-              </span>
-            )}
+      {/* Content */}
+      {chapter?.content ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+          <div className="prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-line">
+            {chapter.content}
           </div>
-
-          {/* Top Navigation */}
-          <div className="flex items-center justify-between mb-6">
-            {chapter.prevSlug ? (
-              <Link
-                href={`/novel/${chapter.prevSlug}`}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors text-gray-700 dark:text-gray-300"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Prev
-              </Link>
-            ) : (
-              <div />
-            )}
-            <Link
-              href={`/novel/${slug}`}
-              className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-              Semua Chapter
-            </Link>
-            {chapter.nextSlug ? (
-              <Link
-                href={`/novel/${chapter.nextSlug}`}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors text-gray-700 dark:text-gray-300"
-              >
-                Next
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            ) : (
-              <div />
-            )}
-          </div>
-
-          {/* Chapter Content */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sm:p-8 mb-6">
-            <div className="chapter-content text-gray-700 dark:text-gray-300 leading-loose text-[15px] whitespace-pre-line">
-              {chapter.content}
-            </div>
-          </div>
-
-          {/* Bottom Navigation */}
-          <div className="flex items-center justify-between">
-            {chapter.prevSlug ? (
-              <Link
-                href={`/novel/${chapter.prevSlug}`}
-                className="flex items-center gap-1 px-5 py-2.5 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors text-gray-700 dark:text-gray-300"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Chapter Sebelumnya
-              </Link>
-            ) : (
-              <div />
-            )}
-            {chapter.nextSlug ? (
-              <Link
-                href={`/novel/${chapter.nextSlug}`}
-                className="flex items-center gap-1 px-5 py-2.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Chapter Selanjutnya
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            ) : (
-              <div />
-            )}
-          </div>
-        </>
+        </div>
       ) : !error ? (
         <div className="text-center py-16">
-          <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-gray-400 dark:text-gray-500">Memuat chapter...</p>
         </div>
       ) : null}
+
+      {/* Bottom navigation */}
+      <div className="flex items-center justify-between mt-6">
+        {prevLink ? (
+          <Link
+            href={prevLink}
+            className="px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 transition"
+          >
+            ← Prev
+          </Link>
+        ) : (
+          <span className="px-4 py-2 text-sm text-gray-300">← Prev</span>
+        )}
+        <Link
+          href={`/novel/${slug}`}
+          className="px-4 py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+        >
+          Semua Chapter
+        </Link>
+        <Link
+          href={nextLink}
+          className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+        >
+          Next →
+        </Link>
+      </div>
     </div>
   );
 }
