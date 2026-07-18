@@ -7,15 +7,24 @@ const BASE = 'https://meionovels.com';
 
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams.get('s') || '';
+  const genre = req.nextUrl.searchParams.get('genre') || '';
   const page = parseInt(req.nextUrl.searchParams.get('page') || '1', 10) || 1;
   const limit = parseInt(req.nextUrl.searchParams.get('limit') || '12', 10);
 
-  if (!search) {
+  // Build URL based on search type
+  let url = '';
+  if (genre) {
+    const genreSlug = genre.toLowerCase().replace(/\s+/g, '-');
+    url = `${BASE}/novel-genre/${genreSlug}/${page > 1 ? `page/${page}/` : ''}`;
+  } else if (search) {
+    url = `${BASE}/?s=${encodeURIComponent(search)}&post_type=wp-manga`;
+  }
+
+  if (!url) {
     return NextResponse.json({ novels: [], totalPages: 0 });
   }
 
   try {
-    const url = `${BASE}/?s=${encodeURIComponent(search)}&post_type=wp-manga`;
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
