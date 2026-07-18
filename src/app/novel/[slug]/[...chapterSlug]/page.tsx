@@ -67,12 +67,7 @@ export default async function ChapterPage({
         ) : (
           <span className="px-4 py-2 text-sm text-gray-300 dark:text-gray-600">← Prev</span>
         )}
-        <Link
-          href={`/novel/${slug}`}
-          className="px-4 py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-        >
-          Semua Chapter
-        </Link>
+
         <Link
           href={nextLink}
           className="px-4 py-2 bg-white dark:bg-gray-800 text-sm font-medium border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 transition"
@@ -113,12 +108,7 @@ export default async function ChapterPage({
         ) : (
           <span className="px-4 py-2 text-sm text-gray-300">← Prev</span>
         )}
-        <Link
-          href={`/novel/${slug}`}
-          className="px-4 py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-        >
-          Semua Chapter
-        </Link>
+
         <Link
           href={nextLink}
           className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
