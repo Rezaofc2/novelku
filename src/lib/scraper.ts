@@ -228,17 +228,9 @@ export async function scrapeNovelDetail(slug: string): Promise<NovelDetail | nul
   
   const totalCh = parseInt(meta["chapters"] || meta["total chapter"] || "0", 10) || 0;
   
-  if (totalCh > 0) {
-    for (let i = 1; i <= totalCh; i++) {
-      const chNum = String(i);
-      chapters.push({
-        title: `Chapter ${chNum}`,
-        slug: `${slug}/${labelFromLink.toLowerCase()}/chapter-${chNum}`,
-        label: labelFromLink,
-        date: undefined,
-      });
-    }
-  }
+  // Chapters not pre-generated - fetched on-demand via API
+  // Total chapter count still available for UI display
+  // Individual chapters fetched via: GET /api/novel?action=chapter&slug=...
 
   return {
     title,

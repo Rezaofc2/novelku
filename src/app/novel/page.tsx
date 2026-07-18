@@ -3,7 +3,7 @@ import Image from "next/image";
 import * as cheerio from "cheerio";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 const ALL_GENRES = ["Action","Adventure","Comedy","Cooking","Drama","Ecchi","Fantasy","Gender Bender","Harem","Historical","Horror","Isekai","Josei","Magic","Martial Arts","Mature","Mecha","Musik","Mystery","One shot","Psychological","Reverse Harem","Romance","School Life","Sci-fi","Seinen","Shoujo","Shoujo Ai","Shounen","Slice of Life","Smut","Sports","Supernatural","Tragedy","Virtual Reality","Wuxia","Xianxia","Xuanhuan","Yuri"];
 

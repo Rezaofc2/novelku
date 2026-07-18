@@ -3,7 +3,7 @@ import Image from "next/image";
 import { scrapeHomeV2 } from "@/lib/scraper";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 const ALL_GENRES = [
   "Action","Adventure","Comedy","Cooking","Drama","Ecchi","Fantasy",

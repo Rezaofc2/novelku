@@ -3,7 +3,7 @@ import { scrapeChapter } from "@/lib/scraper";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export default async function ChapterPage({
   params,

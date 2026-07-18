@@ -1,10 +1,11 @@
+import ChapterList from "@/components/ChapterList";
 import Link from "next/link";
 import Image from "next/image";
 import { scrapeNovelDetail } from "@/lib/scraper";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export default async function NovelDetailPage({
   params,
@@ -141,17 +142,17 @@ export default async function NovelDetailPage({
                 </div>
               )}
 
-              {/* First/Last chapter buttons */}
-              {novel.chapters?.length > 0 && (
+              {/* First/Last chapter buttons - always show when totalChapters > 0 */}
+              {novel?.totalChapters > 0 && (
                 <div className="flex gap-2">
                   <Link
-                    href={`/novel/${novel.chapters[0].slug}`}
+                    href={`/novel/${slug}/mtl/chapter-1`}
                     className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
                   >
                     Baca Pertama
                   </Link>
                   <Link
-                    href={`/novel/${novel.chapters[novel.chapters.length - 1].slug}`}
+                    href={`/novel/${slug}/mtl/chapter-${novel.totalChapters}`}
                     className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 transition-colors"
                   >
                     Baca Terbaru
@@ -176,54 +177,13 @@ export default async function NovelDetailPage({
             </div>
           )}
 
-          {/* Chapter List */}
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-              Daftar Chapter ({novel.chapters?.length || 0})
-            </h2>
-
-            {novel.chapters?.length > 0 ? (
-              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
-                {novel.chapters.map((ch: any, idx: number) => (
-                  <Link
-                    key={ch.slug}
-                    href={`/novel/${ch.slug}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-xs text-gray-400 dark:text-gray-500 w-8 flex-shrink-0">
-                        {novel.chapters.length - idx}
-                      </span>
-                      <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
-                        {ch.title}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {ch.label && (
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          ch.label.toLowerCase() === "htl"
-                            ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                            : "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
-                        }`}>
-                          {ch.label}
-                        </span>
-                      )}
-                      {ch.date && (
-                        <span className="text-xs text-gray-400 dark:text-gray-500">{ch.date}</span>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400 dark:text-gray-500 text-sm">
-                Belum ada chapter tersedia.
-              </p>
-            )}
-          </div>
+          {/* Chapter List - Client-side paginated */}
+          <ChapterList 
+            slug={slug} 
+            totalChapters={novel?.totalChapters || 0} 
+            firstChapterSlug=""
+            chapterLabel="MTL"
+          />
         </>
       ) : !error ? (
         <div className="text-center py-16">
