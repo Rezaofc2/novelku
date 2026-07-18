@@ -117,19 +117,7 @@ export default async function NovelListPage(props: any) {
         {search && <Link href="/novel" className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">✕ Reset</Link>}
       </form>
 
-      {/* Genre Tags — always visible */}
-      <div className="mb-8 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Filter Genre</p>
-        <div className="flex flex-wrap gap-1.5">
-          {ALL_GENRES.map(g => (
-            <Link key={g} href={`/novel?genre=${slugifyGenre(g)}`} className={`px-2.5 py-1 text-[11px] font-medium border rounded-full transition ${
-              genre === slugifyGenre(g) 
-                ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-600 text-indigo-600 dark:text-indigo-400" 
-                : "bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-indigo-300"
-            }`}>{g}</Link>
-          ))}
-        </div>
-      </div>
+      {/* Genre filter removed - search-only */}
 
       {/* Active filter */}
       {(genre || sort || search) && (
