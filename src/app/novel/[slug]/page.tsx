@@ -1,195 +1,176 @@
-import ChapterList from "@/components/ChapterList";
-import Link from "next/link";
-import Image from "next/image";
-import { scrapeNovelDetail } from "@/lib/scraper";
-import { notFound } from "next/navigation";
+'use client';
 
-export const dynamic = "force-dynamic";
-export const revalidate = 86400;
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useParams } from 'next/navigation';
 
-export default async function NovelDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  
-  let novel: any = null;
-  let error: string | null = null;
+const PER_PAGE = 10;
 
-  try {
-    novel = await scrapeNovelDetail(slug);
-  } catch (e: any) {
-    error = e.message || "Gagal memuat data";
+export default function NovelDetailPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+
+  const [novel, setNovel] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    const fetchNovel = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(`/api/novels/detail?slug=${encodeURIComponent(slug)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setNovel(data);
+        } else {
+          setError('Gagal memuat detail novel.');
+        }
+      } catch (e: any) {
+        setError(e.message || 'Gagal memuat data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNovel();
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8 animate-pulse">
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="w-48 h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+          <div className="flex-1 space-y-3">
+            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+            <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded w-1/2" />
+            <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded w-1/3" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  if (!novel && !error) notFound();
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-16 text-center">
+        <p className="text-red-500">{error}</p>
+        <Link href="/" className="text-indigo-600 mt-4 inline-block">← Kembali</Link>
+      </div>
+    );
+  }
+
+  const totalChapters = novel?.chapters || 0;
+  const startCh = page * PER_PAGE + 1;
+  const endCh = Math.min(totalChapters, startCh + PER_PAGE - 1);
+  const totalPages = Math.ceil(totalChapters / PER_PAGE);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-8 flex-wrap">
-        <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-          Beranda
-        </Link>
-        <span>/</span>
-        <Link href="/novel" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-          Daftar Novel
-        </Link>
-        <span>/</span>
-        <span className="text-gray-600 dark:text-gray-300 truncate">{novel?.title || slug}</span>
+      <nav className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        <Link href="/" className="hover:text-indigo-600">Beranda</Link>
+        {' / '}
+        <Link href="/novel" className="hover:text-indigo-600">Daftar Novel</Link>
+        {' / '}
+        <span className="text-gray-600 dark:text-gray-400">{novel?.title || slug}</span>
+      </nav>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-6 mb-8">
+        <div className="relative w-full sm:w-48 h-64 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+          {novel?.cover ? (
+            <Image src={novel.cover} alt={novel.title || ''} fill className="object-cover" unoptimized sizes="200px" />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+              </svg>
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">{novel?.title}</h1>
+          {novel?.rating && <p className="text-yellow-500 text-sm mb-2">★ {novel.rating}</p>}
+          <div className="grid grid-cols-2 gap-1 text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {novel?.author && <p>Author: {novel.author}</p>}
+            {novel?.type && <p>Type: {novel.type}</p>}
+            {novel?.status && <p>Status: {novel.status}</p>}
+            {novel?.release && <p>Release: {novel.release}</p>}
+            <p>Chapters: {totalChapters}</p>
+          </div>
+          {novel?.alternative && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Alternative: {novel.alternative}</p>
+          )}
+          {novel?.genres && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {novel.genres.map((g: string) => (
+                <span key={g} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] rounded-full">{g}</span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2 text-xs">
+            <Link href={`/novel/${slug}/mtl/chapter-1`} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Baca Pertama</Link>
+            <Link href={`/novel/${slug}/mtl/chapter-${totalChapters}`} className="px-3 py-1.5 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20">Baca Terbaru</Link>
+          </div>
+        </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-600 dark:text-red-400 text-sm mb-6">
-          ⚠️ Gagal memuat data dari sumber.
+      {/* Synopsis */}
+      {novel?.synopsis && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Sinopsis</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{novel.synopsis}</p>
         </div>
       )}
 
-      {novel ? (
-        <>
-          {/* Novel Header */}
-          <div className="flex flex-col sm:flex-row gap-6 mb-10">
-            <div className="relative w-40 h-56 sm:w-48 sm:h-64 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0 shadow-lg">
-              {novel.cover ? (
-                <Image src={novel.cover} alt={novel.title} fill className="object-cover" unoptimized />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                  <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                {novel.title}
-              </h1>
-              
-              {/* Rating & Rank */}
-              <div className="flex items-center gap-4 mb-4">
-                {novel.rating && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-yellow-500">★</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">{novel.rating}</span>
-                  </div>
-                )}
-                {novel.rank && (
-                  <span className="text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-                    #{novel.rank}
-                  </span>
-                )}
-              </div>
-
-              {/* Metadata */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4">
-                {novel.author && (
-                  <div className="flex gap-2">
-                    <span className="text-gray-400 dark:text-gray-500">Author:</span>
-                    <span className="text-gray-700 dark:text-gray-300 font-medium">{novel.author}</span>
-                  </div>
-                )}
-                {novel.type && (
-                  <div className="flex gap-2">
-                    <span className="text-gray-400 dark:text-gray-500">Type:</span>
-                    <span className="text-gray-700 dark:text-gray-300 font-medium">{novel.type}</span>
-                  </div>
-                )}
-                {novel.status && (
-                  <div className="flex gap-2">
-                    <span className="text-gray-400 dark:text-gray-500">Status:</span>
-                    <span className={`font-medium ${
-                      novel.status.toLowerCase().includes("completed") || novel.status.toLowerCase().includes("tamat")
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-blue-600 dark:text-blue-400"
-                    }`}>
-                      {novel.status}
-                    </span>
-                  </div>
-                )}
-                {novel.release && (
-                  <div className="flex gap-2">
-                    <span className="text-gray-400 dark:text-gray-500">Release:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{novel.release}</span>
-                  </div>
-                )}
-                {novel.totalChapters > 0 && (
-                  <div className="flex gap-2">
-                    <span className="text-gray-400 dark:text-gray-500">Chapters:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{novel.totalChapters}</span>
-                  </div>
-                )}
-                {novel.alternative && (
-                  <div className="flex gap-2 col-span-full">
-                    <span className="text-gray-400 dark:text-gray-500">Alternative:</span>
-                    <span className="text-gray-700 dark:text-gray-300">{novel.alternative}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Genres */}
-              {novel.genres?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {novel.genres.map((g: string) => (
-                    <Link
-                      key={g}
-                      href={`/novel?genre=${g.toLowerCase()}`}
-                      className="px-2.5 py-1 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-                    >
-                      {g}
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              {/* First/Last chapter buttons - always show when totalChapters > 0 */}
-              {novel?.totalChapters > 0 && (
-                <div className="flex gap-2">
-                  <Link
-                    href={`/novel/${slug}/mtl/chapter-1`}
-                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    Baca Pertama
+      {/* Chapter List */}
+      <div>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+          Daftar Chapter ({totalChapters})
+        </h2>
+        {totalChapters > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {Array.from({ length: endCh - startCh + 1 }, (_, i) => {
+                const num = startCh + i;
+                return (
+                  <Link key={num} href={`/novel/${slug}/mtl/chapter-${num}`} className="flex items-center justify-between py-2.5 px-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition group">
+                    <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-indigo-600">Chapter {num} <span className="text-[10px] text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded ml-1">MTL</span></span>
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </Link>
-                  <Link
-                    href={`/novel/${slug}/mtl/chapter-${novel.totalChapters}`}
-                    className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 transition-colors"
-                  >
-                    Baca Terbaru
-                  </Link>
-                </div>
-              )}
+                );
+              })}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 0}
+                  className="px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-600 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:border-indigo-300"
+                >
+                  ← Sebelumnya
+                </button>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {startCh} - {endCh} dari {totalChapters}
+                </span>
+                <button
+                  onClick={() => setPage(page + 1)}
+                  disabled={page >= totalPages - 1}
+                  className="px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-gray-600 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:border-indigo-300"
+                >
+                  Selanjutnya →
+                </button>
+              </div>
+            )}
           </div>
-
-          {/* Synopsis */}
-          {novel.summary && (
-            <div className="mb-10">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Sinopsis
-              </h2>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                {novel.summary.length > 10 ? novel.summary : "Tidak ada sinopsis tersedia."}
-              </div>
-            </div>
-          )}
-
-          {/* Chapter List - Client-side paginated */}
-          <ChapterList 
-            slug={slug} 
-            totalChapters={novel?.totalChapters || 0} 
-            firstChapterSlug=""
-            chapterLabel="MTL"
-          />
-        </>
-      ) : !error ? (
-        <div className="text-center py-16">
-          <p className="text-gray-400 dark:text-gray-500">Memuat...</p>
-        </div>
-      ) : null}
+        )}
+      </div>
     </div>
   );
 }
