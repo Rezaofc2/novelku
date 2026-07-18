@@ -14,19 +14,18 @@ export default function ChapterList({
   firstChapterSlug: string;
   chapterLabel: string;
 }) {
-  const PER_PAGE = 50;
+  const PER_PAGE = 10;
   const label = chapterLabel || "mtl";
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(totalChapters / PER_PAGE);
 
   if (totalChapters === 0) return null;
 
-  const start = totalChapters - page * PER_PAGE;
-  const end = Math.max(1, start - PER_PAGE + 1);
-  
-  // Generate chapter numbers for current page (newest first)
+  // Generate chapter numbers for current page (oldest first — Chapter 1 first)
   const chapters: { num: number; slug: string; title: string }[] = [];
-  for (let i = start; i >= end; i--) {
+  const startCh = page * PER_PAGE + 1;
+  const endCh = Math.min(totalChapters, startCh + PER_PAGE - 1);
+  for (let i = startCh; i <= endCh; i++) {
     chapters.push({
       num: i,
       slug: `${slug}/${label.toLowerCase()}/chapter-${i}`,
@@ -54,7 +53,7 @@ export default function ChapterList({
             ← Sebelumnya
           </button>
           <span className="text-xs text-gray-400">
-            {start} - {end} dari {totalChapters}
+            {startCh} - {endCh} dari {totalChapters}
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
