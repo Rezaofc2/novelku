@@ -3,19 +3,23 @@
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 
 function GenrePageInner() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const genre = (params.genre as string || '').replace(/-/g, ' ');
   const page = parseInt(searchParams.get('page') || '1', 10) || 1;
 
   const [novels, setNovels] = useState<any[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [searchedPage, setSearchedPage] = useState(0);
 
   useEffect(() => {
+    // Only fetch when page changes from user click
+    if (page === searchedPage) return;
     setLoading(true);
     const qs = new URLSearchParams({ genre, page: String(page), limit: '12' });
     fetch(`/api/novels/search?${qs.toString()}`)
@@ -23,21 +27,23 @@ function GenrePageInner() {
       .then(data => {
         setNovels(data.novels || []);
         setTotalPages(data.totalPages || 1);
+        setSearchedPage(page);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [genre, page]);
+  }, [genre, page, searchedPage]);
+
+  const goPage = (p: number) => {
+    const slugRaw = params.genre as string;
+    router.push(`/novel/genre/${slugRaw}?page=${p}`, { scroll: true });
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6">
-      {/* Genre title */}
-      <div className="mb-6">
-        <Link href="/" className="text-xs text-gray-400 hover:text-indigo-600">← Beranda</Link>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-1 capitalize">{genre}</h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500">Novel dengan genre {genre}</p>
-      </div>
+      <Link href="/genre" className="text-xs text-gray-400 hover:text-indigo-600">← Semua Genre</Link>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-1 capitalize">{genre}</h1>
+      <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">Novel dengan genre {genre}</p>
 
-      {/* Loading */}
       {loading && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 12 }).map((_, i) => (
@@ -52,7 +58,6 @@ function GenrePageInner() {
         </div>
       )}
 
-      {/* Novel grid */}
       {!loading && novels.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {novels.map(n => (
@@ -79,29 +84,25 @@ function GenrePageInner() {
         </div>
       )}
 
-      {/* No results */}
       {!loading && novels.length === 0 && (
         <div className="text-center py-16">
           <p className="text-gray-400 dark:text-gray-500">Tidak ada novel ditemukan untuk genre {genre}.</p>
         </div>
       )}
 
-      {/* Pagination */}
-      {!loading && totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-10">
           {page > 1 && (
-            <Link href={`/novel/genre/${params.genre}?page=${page - 1}`} className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-300 transition">
+            <button onClick={() => goPage(page - 1)} className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-300 transition">
               ← Sebelumnya
-            </Link>
+            </button>
           )}
           <span className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
             Hal {page} dari {totalPages}
           </span>
-          {page < totalPages && (
-            <Link href={`/novel/genre/${params.genre}?page=${page + 1}`} className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-300 transition">
-              Selanjutnya →
-            </Link>
-          )}
+          <button onClick={() => goPage(page + 1)} className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-300 transition">
+            Selanjutnya →
+          </button>
         </div>
       )}
     </div>

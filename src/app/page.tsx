@@ -6,25 +6,21 @@ import Image from 'next/image';
 
 export default function HomePage() {
   const [latestNovels, setLatestNovels] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [fetched, setFetched] = useState(false);
 
-  useEffect(() => {
-    const fetchNovels = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/novels/latest?limit=12');
-        if (res.ok) {
-          const data = await res.json();
-          setLatestNovels(data || []);
-        }
-      } catch (e) {
-        console.error('Failed to fetch novels:', e);
-      } finally {
+  const fetchNovels = () => {
+    if (fetched) return;
+    setLoading(true);
+    fetch('/api/novels/latest?limit=12')
+      .then(r => r.json())
+      .then(data => {
+        setLatestNovels(data || []);
+        setFetched(true);
         setLoading(false);
-      }
-    };
-    fetchNovels();
-  }, []);
+      })
+      .catch(() => setLoading(false));
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -38,7 +34,7 @@ export default function HomePage() {
             Baca novel bahasa Indonesia gratis. Light Novel & Web Novel China, Korea, Jepang terlengkap.
           </p>
           <Link
-            href="/novel?sort=latest"
+            href="/novel"
             className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition"
           >
             Jelajahi Novel →
@@ -46,18 +42,21 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Novel Terbaru */}
+      {/* Novel Terbaru — only fetch when user interacts */}
       <section className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             Novel Terbaru
           </h2>
-          <Link href="/novel?sort=latest" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-            Lihat Semua →
-          </Link>
+          <button
+            onClick={fetchNovels}
+            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            Tampilkan →
+          </button>
         </div>
 
-        {loading ? (
+        {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="animate-pulse bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700">
@@ -69,7 +68,15 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        ) : latestNovels.length > 0 ? (
+        )}
+
+        {!fetched && !loading && (
+          <p className="text-center py-12 text-sm text-gray-400 dark:text-gray-500">
+            Klik "Tampilkan →" untuk memuat novel terbaru.
+          </p>
+        )}
+
+        {latestNovels.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {latestNovels.map((n) => (
               <Link key={n.slug} href={`/novel/${n.slug}`} className="group bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden border border-gray-100 dark:border-gray-700">
@@ -94,10 +101,6 @@ export default function HomePage() {
                 </div>
               </Link>
             ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <p className="text-gray-400 dark:text-gray-500">Tidak ada novel tersedia.</p>
           </div>
         )}
       </section>

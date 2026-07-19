@@ -1,82 +1,74 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 function NovelListInner() {
   const searchParams = useSearchParams();
-  const page = parseInt(searchParams.get('page') || '1', 10) || 1;
-  const search = searchParams.get('s') || '';
-  
-  const [novels, setNovels] = useState<any[]>([]);
+  const router = useRouter();
+  const initSearch = searchParams.get('s') || '';
+  const initPage = parseInt(searchParams.get('page') || '1', 10) || 1;
+
+  const [results, setResults] = useState<any[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searched, setSearched] = useState(!!initSearch);
+  const [query, setQuery] = useState(initSearch);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(initPage);
 
-  const fetchNovels = useCallback(async () => {
-    if (!search) return; // don't fetch if no search query
-    try {
-      setLoading(true);
-      setError(null);
-      const qs = new URLSearchParams({ s: search, page: String(page), limit: '12' });
-      const res = await fetch(`/api/novels/search?${qs.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setNovels(data.novels || []);
+  const doSearch = (q: string, p: number) => {
+    if (!q.trim()) return;
+    setLoading(true);
+    setError('');
+    setQuery(q);
+    setPage(p);
+    const qs = new URLSearchParams({ s: q, page: String(p), limit: '12' });
+    router.push(`/novel?${qs.toString()}`, { scroll: false });
+    fetch(`/api/novels/search?${qs.toString()}`)
+      .then(r => r.json())
+      .then(data => {
+        setResults(data.novels || []);
         setTotalPages(data.totalPages || 1);
-      } else {
-        setError('Gagal memuat data.');
-      }
-    } catch (e: any) {
-      setError(e.message || 'Gagal memuat data');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, page]);
+        setSearched(true);
+        setLoading(false);
+      })
+      .catch(() => { setError('Gagal memuat'); setLoading(false); });
+  };
 
-  useEffect(() => {
-    fetchNovels();
-  }, [fetchNovels]);
-
-  function buildUrl(p: number) {
-    const qs = new URLSearchParams();
-    if (search) qs.set('s', search);
-    if (p > 1) qs.set('page', String(p));
-    const q = qs.toString();
-    return `/novel${q ? '?' + q : ''}`;
+  // Auto-search if URL has query param
+  if (initSearch && !searched) {
+    setSearched(true);
+    // Will trigger useEffect below
   }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const q = (form.elements.namedItem('s') as HTMLInputElement).value;
+    doSearch(q, 1);
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6">
-      {/* Search */}
-      <form className="mb-6 flex gap-2 max-w-lg" action="/novel" method="GET">
+      {/* Search form */}
+      <form onSubmit={handleSubmit} className="mb-6 flex gap-2 max-w-lg">
         <input
           name="s"
-          defaultValue={search}
+          defaultValue={query}
           placeholder="Cari novel..."
           className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
         />
         <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
           Cari
         </button>
-        {search && (
-          <Link href="/novel" className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-            ✕ Reset
-          </Link>
-        )}
       </form>
 
-      {/* No search — prompt */}
-      {!search && (
-        <div className="text-center py-16">
-          <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">Cari novel di atas</p>
-          <p className="text-gray-400 dark:text-gray-500 text-sm">Gunakan fitur search untuk menemukan novel.</p>
-        </div>
+      {/* Error */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">{error}</div>
       )}
 
       {/* Loading */}
@@ -94,17 +86,10 @@ function NovelListInner() {
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
-          {error}
-        </div>
-      )}
-
-      {/* Novel cards */}
-      {!loading && novels.length > 0 && (
+      {/* Results */}
+      {!loading && results.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {novels.map(n => (
+          {results.map(n => (
             <Link key={n.slug} href={`/novel/${n.slug}`} className="group bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden border border-gray-100 dark:border-gray-700">
               <div className="aspect-[3/4] bg-gray-100 dark:bg-gray-700 overflow-hidden relative">
                 {n.cover ? (
@@ -129,34 +114,42 @@ function NovelListInner() {
       )}
 
       {/* Pagination */}
-      {!loading && totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-10">
           {page > 1 && (
-            <Link href={buildUrl(page - 1)} className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-300 transition">
+            <button onClick={() => doSearch(query, page - 1)} className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-300 transition">
               ← Sebelumnya
-            </Link>
+            </button>
           )}
           <span className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
             Hal {page} dari {totalPages}
           </span>
-          {page < totalPages && (
-            <Link href={buildUrl(page + 1)} className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-300 transition">
-              Selanjutnya →
-            </Link>
-          )}
+          <button onClick={() => doSearch(query, page + 1)} className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-indigo-300 transition">
+            Selanjutnya →
+          </button>
         </div>
       )}
 
-      {/* No results after search */}
-      {!loading && search && !error && novels.length === 0 && (
+      {/* No results / initial state */}
+      {!loading && !searchParams.get('s') && results.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-gray-400 dark:text-gray-500">Tidak ada novel ditemukan untuk "{search}".</p>
+          <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">Cari novel favoritmu</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm">Ketik judul novel lalu tekan Cari.</p>
+        </div>
+      )}
+
+      {/* Empty results after search */}
+      {!loading && searchParams.get('s') && results.length === 0 && !error && (
+        <div className="text-center py-16">
+          <p className="text-gray-400 dark:text-gray-500">Tidak ada novel ditemukan untuk "{searchParams.get('s')}".</p>
         </div>
       )}
     </div>
   );
 }
-
 
 export default function NovelListPage() {
   return (
