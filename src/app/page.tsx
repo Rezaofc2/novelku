@@ -29,7 +29,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero */}
-      <section className="relative py-16 px-4 bg-gradient-to-b from-indigo-50 via-white to-gray-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-900 border-b border-gray-100 dark:border-gray-800">
+      <section className="relative py-16 px-4 bg-gradient-to-b from-indigo-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-5xl mx-auto text-center space-y-4">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
             NovelKu
